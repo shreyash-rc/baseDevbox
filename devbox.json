@@ -6,12 +6,13 @@
     "oh-my-zsh@latest",
     "zsh-autosuggestions@latest",
     "zsh-syntax-highlighting@latest",
-    "zsh-autocomplete@latest"
+    "zsh-autocomplete@latest",
+    "less@latest"
   ],
   "env": {
-    "HOME": "$DEVBOX_PROJECT_ROOT/.devbox/home",
+    "HOME":    "$DEVBOX_PROJECT_ROOT/.devbox/home",
     "ZDOTDIR": "$DEVBOX_PROJECT_ROOT/zsh",
-    "LANG": "en_US.UTF-8"
+    "LANG":    "en_US.UTF-8"
   },
   "shell": {
     "init_hook": [
