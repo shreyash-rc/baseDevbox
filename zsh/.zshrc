@@ -10,6 +10,7 @@ ZSH_COMPDUMP="$ZSH_CACHE_DIR/.zcompdump"
 HISTFILE="$HOME/.zsh_history"
 HISTSIZE=10000
 SAVEHIST=10000
+setopt HIST_IGNORE_ALL_DUPS HIST_SAVE_NO_DUPS   # keep only the newest copy of a repeated command
 zstyle ':omz:update' mode disabled         # Nix store is read-only; update via devbox instead
 # zsh-autocomplete records recent dirs here on every cd; create it since HOME starts empty.
 mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/zsh"
