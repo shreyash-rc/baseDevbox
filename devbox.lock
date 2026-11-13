@@ -200,6 +200,71 @@
         }
       }
     },
+    "openssh@latest": {
+      "last_modified": "2026-11-11T14:42:58Z",
+      "resolved": "github:NixOS/nixpkgs/9397dcb09c9598a33509fbc0cce699bd4e6c84d5#openssh",
+      "source": "devbox-search",
+      "version": "10.6p1",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/namkh1wlxlh0ziccpmj4w4x7k5hni6ig-openssh-10.6p1",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/jz2rh99wkppxcn26qwn3xwlnxl5k4rbj-openssh-10.6p1-man",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/9qx7svghgzcg74hilc80pr2rpizznsbh-openssh-10.6p1-dev"
+            }
+          ],
+          "store_path": "/nix/store/namkh1wlxlh0ziccpmj4w4x7k5hni6ig-openssh-10.6p1"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/44rpaiwlpdc4fc260b0pf9r42nrhp5p9-openssh-10.6p1",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/7wfd5718m26xhaanka1m0plqwxdvmaay-openssh-10.6p1-man",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/iqc2kysc1b76i2ag5v8npaj6a88ysxjn-openssh-10.6p1-dev"
+            }
+          ],
+          "store_path": "/nix/store/44rpaiwlpdc4fc260b0pf9r42nrhp5p9-openssh-10.6p1"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/5wyaj1kvkxbbscz6innrh6yjjkdq4qmk-openssh-10.6p1",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/lj7i676is89cxgna2vzq63nyj5r1mxar-openssh-10.6p1-man",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/8q8g9nv2k0wkiaypaanwcwm3f5b59a1g-openssh-10.6p1-dev"
+            }
+          ],
+          "store_path": "/nix/store/5wyaj1kvkxbbscz6innrh6yjjkdq4qmk-openssh-10.6p1"
+        }
+      }
+    },
     "zsh-autocomplete@latest": {
       "last_modified": "2026-11-04T12:32:54Z",
       "resolved": "github:NixOS/nixpkgs/13e53762c5afaf384d4614e94527a9ccfafe41d0#zsh-autocomplete",

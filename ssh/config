@@ -1,0 +1,7 @@
+# ssh config for the devbox, passed with -F (see devbox.json and zsh/.zshrc).
+# OpenSSH finds ~/.ssh from the user account, not $HOME, so without this it would use the host's keys.
+Host *
+  IdentityFile ${HOME}/.ssh/id_ed25519
+  IdentitiesOnly yes
+  UserKnownHostsFile ${HOME}/.ssh/known_hosts
+  StrictHostKeyChecking yes

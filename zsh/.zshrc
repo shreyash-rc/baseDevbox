@@ -35,5 +35,8 @@ source "$SHARE/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 bindkey '^[[B' down-line-or-select '^[OB' down-line-or-select
 bindkey '^[[A' up-line-or-search   '^[OA' up-line-or-search
 
+# Same box-only ssh config git uses (GIT_SSH_COMMAND in devbox.json), so ssh never reads the host's ~/.ssh.
+alias ssh="ssh -F $DEVBOX_PROJECT_ROOT/ssh/config"
+
 # Sign in to GitHub and set the git identity on first run (state lives in the isolated HOME).
 source "$ZDOTDIR/login.zsh"

@@ -8,13 +8,15 @@
     "zsh-syntax-highlighting@latest",
     "zsh-autocomplete@latest",
     "less@latest",
-    "gh@latest"
+    "gh@latest",
+    "openssh@latest"
   ],
   "env": {
-    "HOME":    "$DEVBOX_PROJECT_ROOT/.devbox/home",
-    "ZDOTDIR": "$DEVBOX_PROJECT_ROOT/zsh",
-    "LANG":    "en_US.UTF-8",
-    "GIT_CONFIG_NOSYSTEM": "1"
+    "HOME":                "$DEVBOX_PROJECT_ROOT/.devbox/home",
+    "ZDOTDIR":             "$DEVBOX_PROJECT_ROOT/zsh",
+    "LANG":                "en_US.UTF-8",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_SSH_COMMAND":     "ssh -F $DEVBOX_PROJECT_ROOT/ssh/config"
   },
   "shell": {
     "init_hook": [
@@ -22,7 +24,9 @@
       "# --pure drops /usr/bin; expose only the macOS helpers gh uses for browser login and clipboard.",
       "mkdir -p \"$DEVBOX_PROJECT_ROOT/.devbox/hostbin\"",
       "ln -sf /usr/bin/open /usr/bin/pbcopy /usr/bin/pbpaste \"$DEVBOX_PROJECT_ROOT/.devbox/hostbin/\"",
-      "export PATH=\"$PATH:$DEVBOX_PROJECT_ROOT/.devbox/hostbin\""
+      "export PATH=\"$PATH:$DEVBOX_PROJECT_ROOT/.devbox/hostbin\"",
+      "# Per-box ssh-agent socket. Kept short in /tmp: macOS limits socket paths to 104 characters.",
+      "export SSH_AUTH_SOCK=\"/tmp/devbox-ssh-$(printf %s \"$DEVBOX_PROJECT_ROOT\" | cksum | cut -d' ' -f1).sock\""
     ]
   }
 }

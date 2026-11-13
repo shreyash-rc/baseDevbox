@@ -1,16 +1,42 @@
 # First-run sign-in for the isolated HOME. Sourced by .zshrc; re-run any time with `devbox-login`.
-# Everything is written under $HOME (.config/gh, .gitconfig), never the host's Keychain or dotfiles.
-# Skip it for a session with DEVBOX_SKIP_LOGIN=1.
+# Everything is written under $HOME (.config/gh, .gitconfig, .ssh), never the host's Keychain or dotfiles.
+# Skip it for a session with DEVBOX_SKIP_LOGIN=1. Undo it with `devbox-logout`.
+#
+#   devbox-login          sign in, asking https or ssh the first time
+#   devbox-login ssh      switch git to SSH (box-only key, uploaded to GitHub)
+#   devbox-login https    switch git to HTTPS (gh token)
+
+DEVBOX_SSH_KEY="$HOME/.ssh/id_ed25519"
 
 devbox-login() {
-  # GitHub: token stored in $HOME/.config/gh/hosts.yml (--insecure-storage keeps it out of the shared Keychain).
-  if ! gh auth token --hostname github.com >/dev/null 2>&1; then
-    print -P "%F{117}GitHub sign-in for this devbox%f"
-    gh auth login --hostname github.com --git-protocol https --web \
-      --insecure-storage --scopes user:email || return 1
+  local proto="$1"
+  if [[ -n "$proto" && "$proto" != (https|ssh) ]]; then
+    print -u2 "usage: devbox-login [https|ssh]"; return 2
   fi
 
-  # Let git push/pull over HTTPS using the gh token instead of host SSH keys. Rewritten every time because
+  # GitHub: token stored in $HOME/.config/gh/hosts.yml (--insecure-storage keeps it out of the shared Keychain).
+  # --skip-ssh-key because the SSH key is made and uploaded below, under a known path and title.
+  if ! gh auth token --hostname github.com >/dev/null 2>&1; then
+    print -P "%F{117}GitHub sign-in for this devbox%f"
+    if [[ -z "$proto" ]]; then
+      proto=https
+      vared -p "git protocol (https/ssh): " proto
+      [[ "$proto" == (https|ssh) ]] || { print -u2 "expected https or ssh"; return 2; }
+    fi
+    local scopes=user:email
+    [[ "$proto" == ssh ]] && scopes+=,admin:public_key
+    gh auth login --hostname github.com --git-protocol "$proto" --web \
+      --insecure-storage --skip-ssh-key --scopes "$scopes" || return 1
+  fi
+
+  if [[ -n "$proto" ]]; then
+    gh config set --host github.com git_protocol "$proto"
+  else
+    proto="$(gh config get --host github.com git_protocol 2>/dev/null)"
+    [[ "$proto" == ssh ]] || proto=https
+  fi
+
+  # gh's git credential helper, for https remotes and gh itself. Rewritten every time because
   # `gh auth login`/`setup-git` pin gh's Nix store path, which breaks when gh is upgraded.
   local host
   for host in github.com gist.github.com; do
@@ -18,8 +44,16 @@ devbox-login() {
     git config --global "credential.https://$host.helper" ''
     git config --global --add "credential.https://$host.helper" '!gh auth git-credential'
   done
-  # Repos cloned with SSH remotes go over HTTPS too, since the box has no ssh or host keys.
-  git config --global url.https://github.com/.insteadOf git@github.com:
+
+  # Send every GitHub remote over the chosen protocol, whichever form it was cloned with.
+  git config --global --remove-section url.https://github.com/ 2>/dev/null
+  git config --global --remove-section url.git@github.com: 2>/dev/null
+  if [[ "$proto" == ssh ]]; then
+    _devbox_ssh_setup || return 1
+    git config --global url.git@github.com:.insteadOf https://github.com/
+  else
+    git config --global url.https://github.com/.insteadOf git@github.com:
+  fi
 
   # Commit identity, defaulting to the GitHub account's name and primary email.
   if [[ -z "$(git config --global user.email)" ]]; then
@@ -31,6 +65,61 @@ devbox-login() {
     git config --global user.name "$name"
     git config --global user.email "$email"
   fi
+}
+
+# Box-only SSH key, pinned GitHub host keys, and an agent if the key has a passphrase.
+_devbox_ssh_setup() {
+  local key="$DEVBOX_SSH_KEY" title="devbox:${DEVBOX_PROJECT_ROOT:t}"
+  mkdir -p -m 700 "$HOME/.ssh"
+
+  # Pin the host keys GitHub publishes instead of trusting the first connection.
+  if ! grep -qs '^github.com ' "$HOME/.ssh/known_hosts"; then
+    gh api meta --jq '.ssh_keys[] | "github.com " + .' >> "$HOME/.ssh/known_hosts" || return 1
+  fi
+
+  if [[ ! -f "$key" ]]; then
+    print "Leave the passphrase empty for none; with one, you type it once per boot."
+    ssh-keygen -t ed25519 -C "$title" -f "$key" || return 1
+  fi
+
+  # Upload once; the GitHub key id is kept so devbox-logout can remove it.
+  if [[ ! -s "$key.github-id" ]]; then
+    if ! gh auth status --hostname github.com 2>&1 | grep -q admin:public_key; then
+      print "Approve key upload access for gh in the browser:"
+      gh auth refresh --hostname github.com --insecure-storage --scopes admin:public_key || return 1
+    fi
+    local pub="${$(<"$key.pub")% *}"   # GitHub stores the key without its comment
+    local id="$(gh api user/keys --jq ".[] | select(.key == \"$pub\") | .id")"
+    [[ -n "$id" ]] || id="$(gh api user/keys -f title="$title" -f key="$pub" --jq .id)" || return 1
+    print -r -- "$id" > "$key.github-id"
+  fi
+
+  _devbox_ssh_agent
+}
+
+# One agent per box, shared by its shells, only needed when the key has a passphrase.
+_devbox_ssh_agent() {
+  local key="$DEVBOX_SSH_KEY"
+  [[ -f "$key" ]] || return 0
+  ssh-keygen -y -P '' -f "$key" >/dev/null 2>&1 && return 0
+  ssh-add -l >/dev/null 2>&1
+  if (( $? == 2 )); then   # no agent listening on $SSH_AUTH_SOCK
+    rm -f "$SSH_AUTH_SOCK"
+    ssh-agent -a "$SSH_AUTH_SOCK" -s | sed -n 's/^SSH_AGENT_PID=\([0-9]*\);.*/\1/p' > "$HOME/.ssh/agent.pid"
+  fi
+  ssh-add -l >/dev/null 2>&1 || ssh-add "$key"
+}
+
+# Remove this box's GitHub key, sign gh out, and clear git/ssh state so devbox-login starts fresh.
+devbox-logout() {
+  local key="$DEVBOX_SSH_KEY"
+  if [[ -s "$key.github-id" ]]; then
+    gh api -X DELETE "user/keys/$(<"$key.github-id")" && print "Removed SSH key from GitHub."
+  fi
+  [[ -s "$HOME/.ssh/agent.pid" ]] && kill "$(<"$HOME/.ssh/agent.pid")" 2>/dev/null
+  gh auth logout --hostname github.com
+  rm -rf "$HOME/.ssh" "$HOME/.gitconfig"
+  print "Signed out. Run devbox-login to sign in again."
 }
 
 if [[ -o interactive && -z "$DEVBOX_SKIP_LOGIN" ]]; then
