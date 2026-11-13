@@ -5,6 +5,7 @@
 #   devbox-login          sign in, asking https or ssh the first time
 #   devbox-login ssh      switch git to SSH (box-only key, uploaded to GitHub)
 #   devbox-login https    switch git to HTTPS (gh token)
+#   login-box / logout-box are aliases for devbox-login / devbox-logout.
 
 DEVBOX_SSH_KEY="$HOME/.ssh/id_ed25519"
 
@@ -127,6 +128,9 @@ devbox-logout() {
   print "Signed out. Run ./shell to sign in again."
   exit
 }
+
+# Shorter names that completion finds from "log".
+alias login-box=devbox-login logout-box=devbox-logout
 
 if [[ -o interactive && -z "$DEVBOX_SKIP_LOGIN" ]]; then
   devbox-login
