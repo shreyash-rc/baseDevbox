@@ -19,9 +19,14 @@ devbox-login() {
   if ! gh auth token --hostname github.com >/dev/null 2>&1; then
     print -P "%F{117}GitHub sign-in for this devbox%f"
     if [[ -z "$proto" ]]; then
-      proto=https
-      vared -p "git protocol (https/ssh): " proto
-      [[ "$proto" == (https|ssh) ]] || { print -u2 "expected https or ssh"; return 2; }
+      local key
+      read -k1 "key?git protocol: [1] https (Enter)  [2] ssh  "
+      print
+      case "$key" in
+        2|s) proto=ssh ;;
+        1|h|$'\n') proto=https ;;
+        *) print -u2 "expected 1 or 2"; return 2 ;;
+      esac
     fi
     local scopes=user:email
     [[ "$proto" == ssh ]] && scopes+=,admin:public_key

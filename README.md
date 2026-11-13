@@ -6,7 +6,7 @@
 
 Starts the devbox's own zsh (`--pure`, `HOME=.devbox/home`, config from `zsh/`).
 On first run it signs in to GitHub in the browser, asks whether git should use
-HTTPS or SSH, and sets your git name/email. All of it is stored in the isolated
+HTTPS or SSH (press 1 or Enter for HTTPS, 2 for SSH), and sets your git name/email. All of it is stored in the isolated
 HOME, not the host's Keychain, dotfiles or `~/.ssh`. Set `DEVBOX_SKIP_LOGIN=1`
 to skip it for a session.
 
