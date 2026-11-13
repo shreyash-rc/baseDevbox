@@ -7,17 +7,22 @@
     "zsh-autosuggestions@latest",
     "zsh-syntax-highlighting@latest",
     "zsh-autocomplete@latest",
-    "less@latest"
+    "less@latest",
+    "gh@latest"
   ],
   "env": {
     "HOME":    "$DEVBOX_PROJECT_ROOT/.devbox/home",
     "ZDOTDIR": "$DEVBOX_PROJECT_ROOT/zsh",
-    "LANG":    "en_US.UTF-8"
+    "LANG":    "en_US.UTF-8",
+    "GIT_CONFIG_NOSYSTEM": "1"
   },
   "shell": {
     "init_hook": [
       "mkdir -p \"$HOME\"",
-      "exec zsh"
+      "# --pure drops /usr/bin; expose only the macOS helpers gh uses for browser login and clipboard.",
+      "mkdir -p \"$DEVBOX_PROJECT_ROOT/.devbox/hostbin\"",
+      "ln -sf /usr/bin/open /usr/bin/pbcopy /usr/bin/pbpaste \"$DEVBOX_PROJECT_ROOT/.devbox/hostbin/\"",
+      "export PATH=\"$PATH:$DEVBOX_PROJECT_ROOT/.devbox/hostbin\""
     ]
   }
 }

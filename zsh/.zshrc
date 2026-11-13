@@ -34,3 +34,6 @@ source "$SHARE/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 # Oh My Zsh rebinds the arrow keys; give them back to zsh-autocomplete.
 bindkey '^[[B' down-line-or-select '^[OB' down-line-or-select
 bindkey '^[[A' up-line-or-search   '^[OA' up-line-or-search
+
+# Sign in to GitHub and set the git identity on first run (state lives in the isolated HOME).
+source "$ZDOTDIR/login.zsh"

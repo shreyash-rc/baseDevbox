@@ -1,0 +1,6 @@
+#!/bin/sh
+# Enter the devbox with its own Nix zsh and zsh/.zshrc. `devbox shell` can't do this:
+# --pure always starts bash, and without --pure it loads the host's ~/.zshrc.
+set -eu
+cd "$(dirname "$0")"
+exec devbox run --pure -e "TERM=${TERM:-xterm-256color}" -e "DEVBOX_SKIP_LOGIN=${DEVBOX_SKIP_LOGIN:-}" -- zsh -i "$@"
