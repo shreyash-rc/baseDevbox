@@ -1,8 +1,15 @@
 #!/bin/sh
 # Enter the devbox with its own Nix zsh and zsh/.zshrc. `devbox shell` can't do this:
 # --pure always starts bash, and without --pure it loads the host's ~/.zshrc.
-# `; true` because `exit` passes on the last command's status, which devbox would report as an error.
+# `|| true` because `exit` passes on the last command's status, which devbox would report as an error
+# (devbox scripts stop at the first failure, so `; true` isn't enough). One quoted string because
+# devbox run joins its arguments into a script, so separate args lose their quoting.
 set -eu
 cd "$(dirname "$0")"
+# A box inside a box shares the same HOME, and `exit` (or devbox-logout) only leaves the inner one.
+if [ -n "${DEVBOX_PROJECT_ROOT:-}" ]; then
+  echo "Already inside a devbox ($DEVBOX_PROJECT_ROOT). Run exit first." >&2
+  exit 1
+fi
 exec devbox run --pure -e "TERM=${TERM:-xterm-256color}" -e "DEVBOX_SKIP_LOGIN=${DEVBOX_SKIP_LOGIN:-}" \
-  -- sh -c 'zsh -i "$@"; true' sh "$@"
+  -- 'zsh -i || true'
