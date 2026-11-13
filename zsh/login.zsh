@@ -110,7 +110,7 @@ _devbox_ssh_agent() {
   ssh-add -l >/dev/null 2>&1 || ssh-add "$key"
 }
 
-# Remove this box's GitHub key, sign gh out, and clear git/ssh state so devbox-login starts fresh.
+# Remove this box's GitHub key, sign gh out, clear git/ssh state, and leave the shell; ./shell signs in fresh.
 devbox-logout() {
   local key="$DEVBOX_SSH_KEY"
   if [[ -s "$key.github-id" ]]; then
@@ -119,7 +119,8 @@ devbox-logout() {
   [[ -s "$HOME/.ssh/agent.pid" ]] && kill "$(<"$HOME/.ssh/agent.pid")" 2>/dev/null
   gh auth logout --hostname github.com
   rm -rf "$HOME/.ssh" "$HOME/.gitconfig"
-  print "Signed out. Run devbox-login to sign in again."
+  print "Signed out. Run ./shell to sign in again."
+  exit
 }
 
 if [[ -o interactive && -z "$DEVBOX_SKIP_LOGIN" ]]; then

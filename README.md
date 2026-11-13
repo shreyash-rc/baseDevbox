@@ -32,12 +32,12 @@ GitHub host keys.
 ## Resetting the login
 
 ```sh
-devbox-logout        # then: devbox-login
+devbox-logout        # exits the box; then: ./shell
 ```
 
 `devbox-logout` deletes this box's SSH key from your GitHub account (if it made
-one), stops its ssh-agent, signs gh out, and removes `.gitconfig` and `.ssh`
-from the box HOME. The next `devbox-login` (or `./shell`) starts from scratch:
+one), stops its ssh-agent, signs gh out, removes `.gitconfig` and `.ssh` from
+the box HOME, and exits the shell. The next `./shell` starts from scratch:
 browser sign-in, protocol choice, git name/email.
 
 Signing out doesn't revoke the gh token on GitHub's side. To revoke it, go to
@@ -46,6 +46,6 @@ GitHub → Settings → Applications → Authorized OAuth Apps → GitHub CLI.
 To wipe everything in the box HOME instead, including shell history and caches:
 
 ```sh
-devbox-logout; exit
+devbox-logout
 rm -rf .devbox/home
 ```
