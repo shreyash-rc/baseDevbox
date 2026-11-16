@@ -150,16 +150,25 @@ _devbox_ssh_agent() {
   ssh-add -l >/dev/null 2>&1 || ssh-add "$key"
 }
 
-# Remove this box's GitHub key, sign gh out, and clear git/ssh state so devbox-login starts fresh.
+# Remove this box's GitHub key, sign gh out, clear git/ssh state, and leave the shell; ./shell signs in fresh.
 devbox-logout() {
+  setopt localoptions no_err_return no_err_exit   # every step runs even if an earlier one fails
   local key="$DEVBOX_SSH_KEY"
   if [[ -s "$key.github-id" ]]; then
-    gh api -X DELETE "user/keys/$(<"$key.github-id")" && print "Removed SSH key from GitHub."
+    local id="$(<"$key.github-id")"
+    if gh api -X DELETE "user/keys/$id" >/dev/null 2>&1; then
+      print "Removed SSH key from GitHub."
+    elif gh api "user/keys/$id" >/dev/null 2>&1; then
+      print -u2 "Couldn't remove SSH key $id from GitHub; delete it at https://github.com/settings/keys"
+    else
+      print "SSH key was already removed from GitHub."   # 404: deleted earlier or by hand
+    fi
   fi
   [[ -s "$HOME/.ssh/agent.pid" ]] && kill "$(<"$HOME/.ssh/agent.pid")" 2>/dev/null
-  gh auth logout --hostname github.com
-  rm -rf "$HOME/.ssh" "$HOME/.gitconfig"
-  print "Signed out. Run devbox-login to sign in again."
+  gh auth token --hostname github.com >/dev/null 2>&1 && gh auth logout --hostname github.com
+  rm -rf "$HOME/.ssh" "$HOME/.gitconfig" "$DEVBOX_LOGIN_SKIPPED"
+  print "Signed out. Run ./shell to sign in again."
+  exit
 }
 
 # A skip is only honoured once the git name/email are set; until then every shell offers the three options again.
