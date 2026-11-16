@@ -2,11 +2,13 @@
 # Everything is written under $HOME (.config/gh, .gitconfig, .ssh), never the host's Keychain or dotfiles.
 # Skip it for a session with DEVBOX_SKIP_LOGIN=1. Undo it with `devbox-logout`.
 #
-#   devbox-login          sign in, asking https or ssh the first time
+#   devbox-login          sign in, asking https, ssh, or skip
 #   devbox-login ssh      switch git to SSH (box-only key, uploaded to GitHub)
 #   devbox-login https    switch git to HTTPS (gh token)
+#   login-box / logout-box are aliases for devbox-login / devbox-logout.
 
 DEVBOX_SSH_KEY="$HOME/.ssh/id_ed25519"
+DEVBOX_LOGIN_SKIPPED="$HOME/.config/devbox/login-skipped"   # set by choosing skip; new shells don't ask again
 
 devbox-login() {
   local proto="$1"
@@ -19,14 +21,28 @@ devbox-login() {
   if ! gh auth token --hostname github.com >/dev/null 2>&1; then
     print -P "%F{117}GitHub sign-in for this devbox%f"
     if [[ -z "$proto" ]]; then
-      proto=https
-      vared -p "git protocol (https/ssh): " proto
-      [[ "$proto" == (https|ssh) ]] || { print -u2 "expected https or ssh"; return 2; }
+      local key
+      read -k1 "key?git protocol: [1] https (Enter)  [2] ssh  [3] skip GitHub  "
+      print
+      case "$key" in
+        2|s) proto=ssh ;;
+        1|h|$'\n') proto=https ;;
+        3) proto=skip ;;
+        *) print -u2 "expected 1, 2 or 3"; return 2 ;;
+      esac
     fi
+    if [[ "$proto" == skip ]]; then
+      mkdir -p "${DEVBOX_LOGIN_SKIPPED:h}" && : > "$DEVBOX_LOGIN_SKIPPED"
+      print "Skipped GitHub sign-in. Run devbox-login to sign in later."
+      _devbox_git_identity
+      return 0
+    fi
+    rm -f "$DEVBOX_LOGIN_SKIPPED"
     local scopes=user:email
     [[ "$proto" == ssh ]] && scopes+=,admin:public_key
     gh auth login --hostname github.com --git-protocol "$proto" --web \
       --insecure-storage --skip-ssh-key --scopes "$scopes" || return 1
+    local signed_in_now=1
   fi
 
   if [[ -n "$proto" ]]; then
@@ -34,6 +50,10 @@ devbox-login() {
   else
     proto="$(gh config get --host github.com git_protocol 2>/dev/null)"
     [[ "$proto" == ssh ]] || proto=https
+    # Run by hand while signed in: say so, rather than silently re-applying the config.
+    [[ -z "$DEVBOX_LOGIN_AUTO" ]] &&
+      print "Signed in to GitHub as $(gh api user --jq .login 2>/dev/null) using $proto." \
+            "Switch with devbox-login https|ssh; sign out with devbox-logout."
   fi
 
   # gh's git credential helper, for https remotes and gh itself. Rewritten every time because
@@ -55,16 +75,37 @@ devbox-login() {
     git config --global url.https://github.com/.insteadOf git@github.com:
   fi
 
-  # Commit identity, defaulting to the GitHub account's name and primary email.
-  if [[ -z "$(git config --global user.email)" ]]; then
-    local name email
-    name="$(gh api user --jq '.name // .login' 2>/dev/null)"
-    email="$(gh api user/emails --jq 'map(select(.primary))[0].email' 2>/dev/null)"
-    vared -p "git user.name:  " name
-    vared -p "git user.email: " email
-    git config --global user.name "$name"
-    git config --global user.email "$email"
+  _devbox_git_identity ${signed_in_now:+github}
+}
+
+# Commit identity. Asked at shell start only when missing or right after signing in; asked every time devbox-login
+# is run by hand so it can be changed. The default is shown in brackets and Enter keeps it: the GitHub account's
+# name and primary email right after signing in (pass "github"), otherwise the current value, else GitHub's.
+# Plain `read`, not vared: zsh-autocomplete hooks the line editor and can hide a prefilled value.
+_devbox_git_identity() {
+  local name="$(git config --global user.name)" email="$(git config --global user.email)" gh_name gh_email
+  [[ -n "$DEVBOX_LOGIN_AUTO" && "$1" != github && -n "$name" && -n "$email" ]] && return 0
+  if [[ "$1" == github || -z "$name" || -z "$email" ]]; then
+    gh_name="$(gh api user --jq '.name // .login' 2>/dev/null)"
+    gh_email="$(gh api user/emails --jq 'map(select(.primary))[0].email' 2>/dev/null)"
   fi
+  if [[ "$1" == github ]]; then
+    name="${gh_name:-$name}" email="${gh_email:-$email}"
+  else
+    name="${name:-$gh_name}" email="${email:-$gh_email}"
+  fi
+  _devbox_ask_git user.name "$name"
+  _devbox_ask_git user.email "$email"
+  [[ -n "$(git config --global user.name)" && -n "$(git config --global user.email)" ]] ||
+    print -u2 "git name/email incomplete; commits will fail. You'll be asked again in the next shell."
+}
+
+# Ask for one git setting and save it right away, so Ctrl-C on a later prompt keeps earlier answers.
+_devbox_ask_git() {
+  local setting="$1" value="$2" answer
+  read -r "answer?git $setting${value:+ [$value]}: "
+  [[ -n "$answer" ]] && value="$answer"
+  [[ -n "$value" ]] && git config --global "$setting" "$value"
 }
 
 # Box-only SSH key, pinned GitHub host keys, and an agent if the key has a passphrase.
@@ -110,18 +151,32 @@ _devbox_ssh_agent() {
   ssh-add -l >/dev/null 2>&1 || ssh-add "$key"
 }
 
-# Remove this box's GitHub key, sign gh out, and clear git/ssh state so devbox-login starts fresh.
+# Remove this box's GitHub key, sign gh out, clear git/ssh state, and leave the shell; ./shell signs in fresh.
 devbox-logout() {
+  setopt localoptions no_err_return no_err_exit   # every step runs even if an earlier one fails
   local key="$DEVBOX_SSH_KEY"
   if [[ -s "$key.github-id" ]]; then
-    gh api -X DELETE "user/keys/$(<"$key.github-id")" && print "Removed SSH key from GitHub."
+    local id="$(<"$key.github-id")"
+    if gh api -X DELETE "user/keys/$id" >/dev/null 2>&1; then
+      print "Removed SSH key from GitHub."
+    elif gh api "user/keys/$id" >/dev/null 2>&1; then
+      print -u2 "Couldn't remove SSH key $id from GitHub; delete it at https://github.com/settings/keys"
+    else
+      print "SSH key was already removed from GitHub."   # 404: deleted earlier or by hand
+    fi
   fi
   [[ -s "$HOME/.ssh/agent.pid" ]] && kill "$(<"$HOME/.ssh/agent.pid")" 2>/dev/null
-  gh auth logout --hostname github.com
-  rm -rf "$HOME/.ssh" "$HOME/.gitconfig"
-  print "Signed out. Run devbox-login to sign in again."
+  gh auth token --hostname github.com >/dev/null 2>&1 && gh auth logout --hostname github.com
+  rm -rf "$HOME/.ssh" "$HOME/.gitconfig" "$DEVBOX_LOGIN_SKIPPED"
+  print "Signed out. Run ./shell to sign in again."
+  exit
 }
 
-if [[ -o interactive && -z "$DEVBOX_SKIP_LOGIN" ]]; then
-  devbox-login
+# Shorter names that completion finds from "log".
+alias login-box=devbox-login logout-box=devbox-logout
+
+# A skip is only honoured once the git name/email are set; until then every shell offers the three options again.
+if [[ -o interactive && -z "$DEVBOX_SKIP_LOGIN" ]] &&
+   ! [[ -f "$DEVBOX_LOGIN_SKIPPED" && -n "$(git config --global user.name)" && -n "$(git config --global user.email)" ]]; then
+  DEVBOX_LOGIN_AUTO=1 devbox-login
 fi
