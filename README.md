@@ -29,6 +29,14 @@ passphrase, a per-box ssh-agent keeps it unlocked, so you type it once per boot.
 SSH always uses `ssh/config`, which points at the box's own key and pinned
 GitHub host keys.
 
+## Changing your git name/email
+
+Run `devbox-login`. It always asks for the
+name and email, showing the current value in brackets; press Enter to keep it.
+Right after signing in to GitHub, the brackets show your GitHub name and primary
+email instead.
+New shells ask only when one is missing, and blank answers aren't saved.
+
 ## Resetting the login
 
 ```sh

@@ -27,6 +27,7 @@ devbox-login() {
     [[ "$proto" == ssh ]] && scopes+=,admin:public_key
     gh auth login --hostname github.com --git-protocol "$proto" --web \
       --insecure-storage --skip-ssh-key --scopes "$scopes" || return 1
+    local signed_in_now=1
   fi
 
   if [[ -n "$proto" ]]; then
@@ -34,6 +35,10 @@ devbox-login() {
   else
     proto="$(gh config get --host github.com git_protocol 2>/dev/null)"
     [[ "$proto" == ssh ]] || proto=https
+    # Run by hand while signed in: say so, rather than silently re-applying the config.
+    [[ -z "$DEVBOX_LOGIN_AUTO" ]] &&
+      print "Signed in to GitHub as $(gh api user --jq .login 2>/dev/null) using $proto." \
+            "Switch with devbox-login https|ssh; sign out with devbox-logout."
   fi
 
   # gh's git credential helper, for https remotes and gh itself. Rewritten every time because
@@ -55,16 +60,37 @@ devbox-login() {
     git config --global url.https://github.com/.insteadOf git@github.com:
   fi
 
-  # Commit identity, defaulting to the GitHub account's name and primary email.
-  if [[ -z "$(git config --global user.email)" ]]; then
-    local name email
-    name="$(gh api user --jq '.name // .login' 2>/dev/null)"
-    email="$(gh api user/emails --jq 'map(select(.primary))[0].email' 2>/dev/null)"
-    vared -p "git user.name:  " name
-    vared -p "git user.email: " email
-    git config --global user.name "$name"
-    git config --global user.email "$email"
+  _devbox_git_identity ${signed_in_now:+github}
+}
+
+# Commit identity. Asked at shell start only when missing or right after signing in; asked every time devbox-login
+# is run by hand so it can be changed. The default is shown in brackets and Enter keeps it: the GitHub account's
+# name and primary email right after signing in (pass "github"), otherwise the current value, else GitHub's.
+# Plain `read`, not vared: zsh-autocomplete hooks the line editor and can hide a prefilled value.
+_devbox_git_identity() {
+  local name="$(git config --global user.name)" email="$(git config --global user.email)" gh_name gh_email
+  [[ -n "$DEVBOX_LOGIN_AUTO" && "$1" != github && -n "$name" && -n "$email" ]] && return 0
+  if [[ "$1" == github || -z "$name" || -z "$email" ]]; then
+    gh_name="$(gh api user --jq '.name // .login' 2>/dev/null)"
+    gh_email="$(gh api user/emails --jq 'map(select(.primary))[0].email' 2>/dev/null)"
   fi
+  if [[ "$1" == github ]]; then
+    name="${gh_name:-$name}" email="${gh_email:-$email}"
+  else
+    name="${name:-$gh_name}" email="${email:-$gh_email}"
+  fi
+  _devbox_ask_git user.name "$name"
+  _devbox_ask_git user.email "$email"
+  [[ -n "$(git config --global user.name)" && -n "$(git config --global user.email)" ]] ||
+    print -u2 "git name/email incomplete; commits will fail. You'll be asked again in the next shell."
+}
+
+# Ask for one git setting and save it right away, so Ctrl-C on a later prompt keeps earlier answers.
+_devbox_ask_git() {
+  local setting="$1" value="$2" answer
+  read -r "answer?git $setting${value:+ [$value]}: "
+  [[ -n "$answer" ]] && value="$answer"
+  [[ -n "$value" ]] && git config --global "$setting" "$value"
 }
 
 # Box-only SSH key, pinned GitHub host keys, and an agent if the key has a passphrase.
@@ -123,5 +149,5 @@ devbox-logout() {
 }
 
 if [[ -o interactive && -z "$DEVBOX_SKIP_LOGIN" ]]; then
-  devbox-login
+  DEVBOX_LOGIN_AUTO=1 devbox-login
 fi
