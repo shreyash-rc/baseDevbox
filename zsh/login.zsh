@@ -2,11 +2,12 @@
 # Everything is written under $HOME (.config/gh, .gitconfig, .ssh), never the host's Keychain or dotfiles.
 # Skip it for a session with DEVBOX_SKIP_LOGIN=1. Undo it with `devbox-logout`.
 #
-#   devbox-login          sign in, asking https or ssh the first time
+#   devbox-login          sign in, asking https, ssh, or skip
 #   devbox-login ssh      switch git to SSH (box-only key, uploaded to GitHub)
 #   devbox-login https    switch git to HTTPS (gh token)
 
 DEVBOX_SSH_KEY="$HOME/.ssh/id_ed25519"
+DEVBOX_LOGIN_SKIPPED="$HOME/.config/devbox/login-skipped"   # set by choosing skip; new shells don't ask again
 
 devbox-login() {
   local proto="$1"
@@ -20,14 +21,22 @@ devbox-login() {
     print -P "%F{117}GitHub sign-in for this devbox%f"
     if [[ -z "$proto" ]]; then
       local key
-      read -k1 "key?git protocol: [1] https (Enter)  [2] ssh  "
+      read -k1 "key?git protocol: [1] https (Enter)  [2] ssh  [3] skip GitHub  "
       print
       case "$key" in
         2|s) proto=ssh ;;
         1|h|$'\n') proto=https ;;
-        *) print -u2 "expected 1 or 2"; return 2 ;;
+        3) proto=skip ;;
+        *) print -u2 "expected 1, 2 or 3"; return 2 ;;
       esac
     fi
+    if [[ "$proto" == skip ]]; then
+      mkdir -p "${DEVBOX_LOGIN_SKIPPED:h}" && : > "$DEVBOX_LOGIN_SKIPPED"
+      print "Skipped GitHub sign-in. Run devbox-login to sign in later."
+      _devbox_git_identity
+      return 0
+    fi
+    rm -f "$DEVBOX_LOGIN_SKIPPED"
     local scopes=user:email
     [[ "$proto" == ssh ]] && scopes+=,admin:public_key
     gh auth login --hostname github.com --git-protocol "$proto" --web \
@@ -153,6 +162,8 @@ devbox-logout() {
   print "Signed out. Run devbox-login to sign in again."
 }
 
-if [[ -o interactive && -z "$DEVBOX_SKIP_LOGIN" ]]; then
+# A skip is only honoured once the git name/email are set; until then every shell offers the three options again.
+if [[ -o interactive && -z "$DEVBOX_SKIP_LOGIN" ]] &&
+   ! [[ -f "$DEVBOX_LOGIN_SKIPPED" && -n "$(git config --global user.name)" && -n "$(git config --global user.email)" ]]; then
   DEVBOX_LOGIN_AUTO=1 devbox-login
 fi
