@@ -50,6 +50,9 @@ New shells ask only when one is missing, and blank answers aren't saved.
 devbox-logout        # exits the box; then: ./shell
 ```
 
+`login-box` and `logout-box` are shorter aliases for `devbox-login` and
+`devbox-logout`, so typing `log` brings them up in completion.
+
 `devbox-logout` deletes this box's SSH key from your GitHub account (if it made
 one), stops its ssh-agent, signs gh out, removes `.gitconfig` and `.ssh` from
 the box HOME, and exits the shell. The next `./shell` starts from scratch:

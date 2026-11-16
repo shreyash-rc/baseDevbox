@@ -5,6 +5,7 @@
 #   devbox-login          sign in, asking https, ssh, or skip
 #   devbox-login ssh      switch git to SSH (box-only key, uploaded to GitHub)
 #   devbox-login https    switch git to HTTPS (gh token)
+#   login-box / logout-box are aliases for devbox-login / devbox-logout.
 
 DEVBOX_SSH_KEY="$HOME/.ssh/id_ed25519"
 DEVBOX_LOGIN_SKIPPED="$HOME/.config/devbox/login-skipped"   # set by choosing skip; new shells don't ask again
@@ -170,6 +171,9 @@ devbox-logout() {
   print "Signed out. Run ./shell to sign in again."
   exit
 }
+
+# Shorter names that completion finds from "log".
+alias login-box=devbox-login logout-box=devbox-logout
 
 # A skip is only honoured once the git name/email are set; until then every shell offers the three options again.
 if [[ -o interactive && -z "$DEVBOX_SKIP_LOGIN" ]] &&
