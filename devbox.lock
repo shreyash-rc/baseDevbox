@@ -1,6 +1,44 @@
 {
   "lockfile_version": "1",
   "packages": {
+    "codegraph@latest": {
+      "last_modified": "2026-11-16T14:48:49Z",
+      "resolved": "github:NixOS/nixpkgs/e21fec321d73511849707a7585e4ea155ee4bf40#codegraph",
+      "source": "devbox-search",
+      "version": "1.6.2",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/nf7wpjk5j4b0w0vxjn5gbfvs981r00mn-codegraph-1.6.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/nf7wpjk5j4b0w0vxjn5gbfvs981r00mn-codegraph-1.6.2"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/svqq2c4d9rlfpglzgwlzgfdq8yvgi4p3-codegraph-1.6.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/svqq2c4d9rlfpglzgwlzgfdq8yvgi4p3-codegraph-1.6.2"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/3wwcp1ydh8fwiqk0bdl87l89na88naxy-codegraph-1.6.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/3wwcp1ydh8fwiqk0bdl87l89na88naxy-codegraph-1.6.2"
+        }
+      }
+    },
     "gh@latest": {
       "last_modified": "2026-11-11T14:42:58Z",
       "resolved": "github:NixOS/nixpkgs/9397dcb09c9598a33509fbc0cce699bd4e6c84d5#gh",

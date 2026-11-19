@@ -9,7 +9,8 @@
     "zsh-autocomplete@latest",
     "less@latest",
     "gh@latest",
-    "openssh@latest"
+    "openssh@latest",
+    "codegraph@latest"
   ],
   "env": {
     "HOME":                "$DEVBOX_PROJECT_ROOT/.devbox/home",

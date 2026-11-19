@@ -47,3 +47,6 @@ alias ssh="ssh -F $DEVBOX_PROJECT_ROOT/ssh/config"
 
 # Sign in to GitHub and set the git identity on first run (state lives in the isolated HOME).
 source "$ZDOTDIR/login.zsh"
+
+alias claude=/opt/homebrew/bin/claude
+alias code=/opt/homebrew/bin/code
